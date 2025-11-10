@@ -282,7 +282,13 @@ def generate_batch(
     )
     context_batch = Batch.from_data_list([context_chemgraph] * batch_size)
 
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    # Select device: CUDA (NVIDIA), MPS (Apple M-Series), or CPU fallback
+    if torch.cuda.is_available():
+        device = torch.device("cuda:0")
+    elif torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
     sampled_chemgraph_batch = denoiser(
         sdes=sdes,
         device=device,

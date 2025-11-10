@@ -1155,9 +1155,11 @@ class BaseSampleSO3(nn.Module):
         current_device = sigma_grid.device
         sigma_grid_tmp = sigma_grid.to(torch.float64)
 
-        # If cuda is available, initialize everything on GPU.
+        # If CUDA or MPS is available, initialize everything on GPU for faster computation.
         if torch.cuda.is_available():
             sigma_grid_tmp = sigma_grid_tmp.to(device="cuda")
+        elif torch.backends.mps.is_available():
+            sigma_grid_tmp = sigma_grid_tmp.to(device="mps")
 
         # Set up grid for angle resolution. Convert to double precision for better handling of numerics.
         omega_grid = torch.linspace(0.0, 1, self.num_omega + 1).to(sigma_grid_tmp)
@@ -1656,9 +1658,11 @@ class ScoreSO3(nn.Module):
         current_device = sigma_grid.device
         sigma_grid_tmp = sigma_grid.to(torch.float64)
 
-        # If cuda is available, initialize everything on GPU.
+        # If CUDA or MPS is available, initialize everything on GPU for faster computation.
         if torch.cuda.is_available():
             sigma_grid_tmp = sigma_grid_tmp.to(device="cuda")
+        elif torch.backends.mps.is_available():
+            sigma_grid_tmp = sigma_grid_tmp.to(device="mps")
 
         # Set up grid for angle resolution. Convert to double precision for better handling of
         # numerics.

@@ -193,7 +193,9 @@ class SAAttention(nn.Module):
         out_scalar = out_scalar.reshape(*out_scalar.shape[:2], -1)
 
         # Alg 22 line 10.
-        with torch.amp.autocast("cuda", enabled=False):
+        # Use device-agnostic mixed precision (supports CUDA, MPS, and CPU)
+        device_type = attn.device.type if attn.device.type in ["cuda", "mps"] else "cpu"
+        with torch.amp.autocast(device_type, enabled=False):
             out_point_global = torch.einsum(
                 "bhij,bjhcp->bihcp", attn.float(), v_point_global.float()
             )

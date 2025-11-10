@@ -155,13 +155,20 @@ def run_one_md(
     )
     integrator.setConstraintTolerance(0.00001)
 
+    # Try to select the best available platform for OpenMM
+    # Priority: CUDA (NVIDIA GPUs) > OpenCL (Apple M-Series and others) > CPU
+    platform = None
     try:
         platform = mm.Platform.getPlatformByName("CUDA")
         logger.debug("simulation uses CUDA platform")
     except Exception:
-        # fall back to default
-        platform = None
-        logger.warning("Cannot find CUDA platform. Simulation might be slow.")
+        try:
+            platform = mm.Platform.getPlatformByName("OpenCL")
+            logger.debug("simulation uses OpenCL platform (good for Apple M-Series GPUs)")
+        except Exception:
+            # Fall back to CPU if neither GPU platform is available
+            platform = None
+            logger.warning("Cannot find CUDA or OpenCL platform. Using CPU - simulation might be slow.")
     simulation = app.Simulation(modeller.topology, system, integrator, platform=platform)
 
     simulation.context.setPositions(modeller.positions)
