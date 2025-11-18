@@ -3,6 +3,7 @@
 """Script for sampling from a trained model."""
 
 import logging
+import os
 import typing
 from collections.abc import Callable
 from pathlib import Path
@@ -283,18 +284,48 @@ def generate_batch(
     context_batch = Batch.from_data_list([context_chemgraph] * batch_size)
 
     # Select device: CUDA (NVIDIA), MPS (Apple M-Series), or CPU fallback
-    if torch.cuda.is_available():
+    # Allow override via environment variable for debugging
+    forced_device = os.environ.get("BIOEMU_DEVICE")
+    if forced_device:
+        device = torch.device(forced_device)
+        logger.info(f"Using forced device from BIOEMU_DEVICE: {forced_device}")
+    elif torch.cuda.is_available():
         device = torch.device("cuda:0")
-    elif torch.backends.mps.is_available():
+        logger.info("Using CUDA device for sampling (NVIDIA GPU)")
+    elif torch.backends.mps.is_available() and torch.backends.mps.is_built():
         device = torch.device("mps")
+        logger.info("Using MPS device for sampling (Apple Metal GPU)")
     else:
         device = torch.device("cpu")
-    sampled_chemgraph_batch = denoiser(
-        sdes=sdes,
-        device=device,
-        batch=context_batch,
-        score_model=score_model,
-    )
+        logger.warning(
+            "No GPU available - using CPU for sampling (this will be significantly slower)"
+        )
+
+    # Run denoising with error recovery for MPS
+    try:
+        sampled_chemgraph_batch = denoiser(
+            sdes=sdes,
+            device=device,
+            batch=context_batch,
+            score_model=score_model,
+        )
+    except RuntimeError as e:
+        # If MPS operation fails, fall back to CPU
+        if device.type == "mps" and ("MPS" in str(e) or "mps" in str(e).lower()):
+            logger.error(f"MPS operation failed: {e}")
+            logger.warning(
+                "Falling back to CPU. Consider using CUDA or pre-generating SO3 cache."
+            )
+            device = torch.device("cpu")
+            # Retry on CPU
+            sampled_chemgraph_batch = denoiser(
+                sdes=sdes,
+                device=device,
+                batch=context_batch,
+                score_model=score_model,
+            )
+        else:
+            raise
     assert isinstance(sampled_chemgraph_batch, Batch)
     sampled_chemgraphs = sampled_chemgraph_batch.to_data_list()
     pos = torch.stack([x.pos for x in sampled_chemgraphs]).to("cpu")

@@ -161,11 +161,12 @@ def run_one_md(
     try:
         platform = mm.Platform.getPlatformByName("CUDA")
         logger.debug("simulation uses CUDA platform")
-    except Exception:
+    except (RuntimeError, ValueError, KeyError):
+        # CUDA platform not available, try OpenCL
         try:
             platform = mm.Platform.getPlatformByName("OpenCL")
             logger.debug("simulation uses OpenCL platform (good for Apple M-Series GPUs)")
-        except Exception:
+        except (RuntimeError, ValueError, KeyError):
             # Fall back to CPU if neither GPU platform is available
             platform = None
             logger.warning("Cannot find CUDA or OpenCL platform. Using CPU - simulation might be slow.")
