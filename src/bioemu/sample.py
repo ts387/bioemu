@@ -316,6 +316,9 @@ def generate_batch(
             logger.warning(
                 "Falling back to CPU. Consider using CUDA or pre-generating SO3 cache."
             )
+            # Clear MPS cache before falling back to CPU
+            if hasattr(torch.mps, "empty_cache"):
+                torch.mps.empty_cache()
             device = torch.device("cpu")
             # Retry on CPU
             sampled_chemgraph_batch = denoiser(
@@ -330,6 +333,10 @@ def generate_batch(
     sampled_chemgraphs = sampled_chemgraph_batch.to_data_list()
     pos = torch.stack([x.pos for x in sampled_chemgraphs]).to("cpu")
     node_orientations = torch.stack([x.node_orientations for x in sampled_chemgraphs]).to("cpu")
+
+    # Clear MPS cache to free GPU memory between batches
+    if device.type == "mps" and hasattr(torch.mps, "empty_cache"):
+        torch.mps.empty_cache()
 
     return {"pos": pos, "node_orientations": node_orientations}
 

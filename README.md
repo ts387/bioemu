@@ -20,12 +20,13 @@ This repository contains inference code and model weights.
 ## Table of Contents
 - [Installation](#installation)
 - [Sampling structures](#sampling-structures)
+  - [Apple Silicon (M-series) Support](#apple-silicon-m-series-support)
 - [Azure AI Foundry](#azure-ai-foundry)
 - [Get in touch](#get-in-touch)
 - [Citation](#citation)
 
 ## Installation
-bioemu is provided as a Linux-only pip-installable package. We currently only support Python versions from 3.10 to 3.12:
+bioemu is provided as a pip-installable package supporting Linux and macOS (Apple Silicon). We currently only support Python versions from 3.10 to 3.12:
 
 ```bash
 pip install bioemu
@@ -56,6 +57,26 @@ Sampling times will depend on sequence length and available infrastructure. The 
  |             100 |          4 |
  |             300 |         40 |
  |             600 |        150 |
+
+### Apple Silicon (M-series) Support
+
+BioEmu supports GPU acceleration on Apple M-series Macs via Metal Performance Shaders (MPS). The device is automatically detected:
+
+- **CUDA** (NVIDIA GPUs) - highest priority
+- **MPS** (Apple M1/M2/M3/M4) - second priority
+- **CPU** - fallback
+
+To force a specific device for debugging, set the `BIOEMU_DEVICE` environment variable:
+```bash
+export BIOEMU_DEVICE=cpu  # Force CPU
+export BIOEMU_DEVICE=mps  # Force MPS
+```
+
+> [!NOTE]
+> On M-series Macs, the first run will generate SO3 lookup tables on CPU (this takes ~10-15 seconds). These tables are cached for subsequent runs. The CPU is used for this step because M-series chips lack hardware float64 support, and the SO3 computations require double precision for numerical accuracy.
+
+> [!NOTE]
+> Side-chain relaxation via OpenMM will use the OpenCL platform on M-series Macs, which provides GPU acceleration through Metal.
 
 By default, unphysical structures (steric clashes or chain discontinuities) will be filtered out, so you will typically get fewer samples in the output than requested. The difference can be very large if your protein has large disordered regions which are very likely to produce clashes. If you want to get all generated samples in the output, irrespective of whether they are physically valid, use the `--filter_samples=False` argument.
 
