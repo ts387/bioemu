@@ -237,6 +237,11 @@ def main(
     )
     # Adjust batch size by sequence length since longer sequence require quadratically more memory
     batch_size = int(batch_size_100 * (100 / len(sequence)) ** 2)
+    if batch_size == 0:
+        logger.warning(
+            f"Sequence of length {len(sequence)} is very long. Using batch_size=1."
+        )
+        batch_size = 1
 
     batch_size = min(batch_size, num_samples)
     logger.info(f"Using batch size {min(batch_size, num_samples)}")
