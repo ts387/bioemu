@@ -8,10 +8,10 @@ VENV_FOLDER=$2
 
 ${BASE_PYTHON} -m venv --without-pip ${VENV_FOLDER}
 ${BASE_PYTHON} -m uv pip install --python ${VENV_FOLDER}/bin/python setuptools
-${BASE_PYTHON} -m uv pip install --python ${VENV_FOLDER}/bin/python 'colabfold[alphafold-minus-jax]==1.5.4'
+${BASE_PYTHON} -m uv pip install --python ${VENV_FOLDER}/bin/python 'colabfold[alphafold-minus-jax] @ git+https://github.com/sokrypton/ColabFold.git'
 ${BASE_PYTHON} -m uv pip install --python ${VENV_FOLDER}/bin/python --force-reinstall \
     "jax[cuda12]==0.4.35" \
-    "numpy==1.26.4" \
+    "numpy>=2.0.2,<3" \
     "nvidia-cublas-cu12==12.8.4.1" \
     "nvidia-cuda-cupti-cu12==12.8.90" \
     "nvidia-cuda-nvcc-cu12==12.8.93" \
