@@ -74,6 +74,7 @@ def main(
     num_samples: int,
     output_dir: str | Path,
     batch_size_100: int = 10,
+    batch_size: int | None = None,
     model_name: Literal["bioemu-v1.0", "bioemu-v1.1", "bioemu-v1.2"] | None = "bioemu-v1.1",
     ckpt_path: str | Path | None = None,
     model_config_path: str | Path | None = None,
@@ -96,6 +97,9 @@ def main(
         output_dir: Directory to save the samples. Each batch of samples will initially be dumped as .npz files. Once all batches are sampled, they will be converted to .xtc and .pdb.
         batch_size_100: Batch size you'd use for a sequence of length 100. The batch size will be calculated from this, assuming
            that the memory requirement to compute each sample scales quadratically with the sequence length.
+           Ignored if `batch_size` is set.
+        batch_size: If set, use this batch size directly instead of auto-calculating from batch_size_100.
+           Useful when the auto-calculated batch size is too conservative for your GPU.
         model_name: Name of pretrained model to use. If this is set, you do not need to provide `ckpt_path` or `model_config_path`.
             The model will be retrieved from huggingface; the following models are currently available:
             - bioemu-v1.0: checkpoint used in the original preprint (https://www.biorxiv.org/content/10.1101/2024.12.05.626885v2)
@@ -235,13 +239,17 @@ def main(
     logger.info(
         f"Sampling {num_samples} structures for sequence of length {len(sequence)} residues..."
     )
-    # Adjust batch size by sequence length since longer sequence require quadratically more memory
-    batch_size = int(batch_size_100 * (100 / len(sequence)) ** 2)
-    if batch_size == 0:
-        logger.warning(
-            f"Sequence of length {len(sequence)} is very long. Using batch_size=1."
-        )
-        batch_size = 1
+    if batch_size is not None:
+        if batch_size < 1:
+            raise ValueError(f"batch_size must be >= 1, got {batch_size}")
+    else:
+        # Adjust batch size by sequence length since longer sequences require quadratically more memory
+        batch_size = int(batch_size_100 * (100 / len(sequence)) ** 2)
+        if batch_size == 0:
+            logger.warning(
+                f"Sequence of length {len(sequence)} is very long. Using batch_size=1."
+            )
+            batch_size = 1
 
     batch_size = min(batch_size, num_samples)
     logger.info(f"Using batch size {min(batch_size, num_samples)}")
